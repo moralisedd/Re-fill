@@ -38,25 +38,28 @@ function generate_qr_token(int $user_id): array {
     $token_value = bin2hex(random_bytes(32));
     $nonce       = bin2hex(random_bytes(16));
 
-    // I set expires_at using MySQL's own NOW() + INTERVAL rather than PHP's date().
-    // Previously, date('Y-m-d H:i:s', time() + 60) used PHP's local timezone while
-    // validate_qr_token() checks against MySQL's NOW() — on InfinityFree these differ
-    // (PHP = BST, MySQL = UTC), so tokens stayed valid up to an hour after the timer
-    // hit zero. Letting MySQL own the timestamp means both sides of the comparison
-    // always use the same clock.
+    // I compute expires_at with gmdate() which always outputs UTC regardless of the
+    // server's local clock — it is the PHP equivalent of MySQL's UTC_TIMESTAMP().
+    //
+    // A previous attempt used NOW() + INTERVAL ? SECOND directly in the INSERT, but
+    // MySQL's binary prepared-statement protocol (required when EMULATE_PREPARES=false)
+    // does not support INTERVAL with a bound placeholder. The parameter silently binds
+    // as NULL, the INSERT stores an invalid expiry, and LAST_INSERT_ID() then returns
+    // a stale ID from an earlier session — pulling an old token row that is already
+    // expired, which is why the QR page showed "Expired" immediately on load.
+    //
+    // Timezone consistency is guaranteed by two other layers:
+    //   1. config.php — date_default_timezone_set('UTC'): PHP date functions → UTC
+    //   2. db.php     — SET time_zone = '+00:00':         MySQL NOW()        → UTC
+    // Both sides of the expires_at > NOW() comparison in validate_qr_token() now
+    // operate on the same UTC clock.
+    $expires_at = gmdate('Y-m-d H:i:s', time() + QR_TOKEN_TTL_SECONDS);
+
     $stmt = $pdo->prepare(
         'INSERT INTO qr_tokens (user_id, token_value, nonce, expires_at)
-         VALUES (?, ?, ?, NOW() + INTERVAL ? SECOND)'
+         VALUES (?, ?, ?, ?)'
     );
-    $stmt->execute([$user_id, $token_value, $nonce, QR_TOKEN_TTL_SECONDS]);
-
-    // Fetch the actual expires_at MySQL stored so the JS countdown timer
-    // uses the exact same timestamp that validate_qr_token() checks against.
-    $fetch = $pdo->prepare(
-        'SELECT expires_at FROM qr_tokens WHERE token_id = LAST_INSERT_ID()'
-    );
-    $fetch->execute();
-    $expires_at = $fetch->fetchColumn();
+    $stmt->execute([$user_id, $token_value, $nonce, $expires_at]);
 
     return [
         'token_value' => $token_value,
