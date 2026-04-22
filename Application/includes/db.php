@@ -30,9 +30,14 @@ function get_db(): PDO {
         );
 
         $options = [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,  // Throw on error so I can catch it
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,         // Always return named keys
-            PDO::ATTR_EMULATE_PREPARES   => false,                    // Real prepared statements only
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,   // Throw on error so I can catch it
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,          // Always return named keys
+            PDO::ATTR_EMULATE_PREPARES   => false,                     // Real prepared statements only
+            // Lock the MySQL session timezone to UTC so NOW() always matches
+            // PHP's date() output (which is also forced to UTC in config.php).
+            // Without this, shared hosts like InfinityFree can have PHP and MySQL
+            // on different timezone offsets, making expires_at > NOW() unreliable.
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '+00:00'",
         ];
 
         try {

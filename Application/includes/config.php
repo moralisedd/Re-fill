@@ -7,6 +7,13 @@
  * Every page loads this indirectly through db.php -> config.php.
  */
 
+// ── Timezone ─────────────────────────────────────────────────
+// I lock PHP to UTC so date() outputs always match MySQL's NOW() when the
+// MySQL session is also set to UTC (done in db.php). Without this, PHP on a
+// BST/local-timezone server generates datetime strings that are hours ahead of
+// MySQL's UTC clock — causing tokens to stay valid long after they should expire.
+date_default_timezone_set('UTC');
+
 // ── Base URL ─────────────────────────────────────────────────
 // I use a constant rather than a relative path because the app lives in a
 // subdirectory (/refill/) on XAMPP. On a production root domain, set this to ''.
