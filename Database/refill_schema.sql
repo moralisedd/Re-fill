@@ -60,8 +60,12 @@ CREATE TABLE `cafe_staff` (
 --
 
 INSERT INTO `cafe_staff` (`staff_id`, `cafe_id`, `email`, `password_hash`, `full_name`, `role`, `is_active`, `created_at`) VALUES
-(1, 1, 'owner@dailygrind.co.uk',   '$2y$12$JeQ/CXIOwyX6iotG1LPDleeA6X1ie0oRuytgjYld77JElTidQn.Qu', 'Alice Thornton', 'owner',   1, '2026-04-21 09:46:17'),
-(2, 1, 'barista@dailygrind.co.uk', '$2y$12$JeQ/CXIOwyX6iotG1LPDleeA6X1ie0oRuytgjYld77JElTidQn.Qu', 'Sam Patel',      'barista', 1, '2026-04-21 09:46:17');
+(1, 1, 'owner@dailygrind.co.uk',     '$2y$12$JeQ/CXIOwyX6iotG1LPDleeA6X1ie0oRuytgjYld77JElTidQn.Qu', 'Alice Thornton',  'owner',   1, '2026-04-21 09:46:17'),
+(2, 1, 'barista@dailygrind.co.uk',   '$2y$12$JeQ/CXIOwyX6iotG1LPDleeA6X1ie0oRuytgjYld77JElTidQn.Qu', 'Sam Patel',       'barista', 1, '2026-04-21 09:46:17'),
+(3, 2, 'owner@brewandbloom.co.uk',   '$2y$12$JeQ/CXIOwyX6iotG1LPDleeA6X1ie0oRuytgjYld77JElTidQn.Qu', 'Maya Chen',       'owner',   1, '2026-04-21 09:46:17'),
+(4, 2, 'barista@brewandbloom.co.uk', '$2y$12$JeQ/CXIOwyX6iotG1LPDleeA6X1ie0oRuytgjYld77JElTidQn.Qu', 'Jake Morrison',   'barista', 1, '2026-04-21 09:46:17'),
+(5, 3, 'owner@commonground.cafe',    '$2y$12$JeQ/CXIOwyX6iotG1LPDleeA6X1ie0oRuytgjYld77JElTidQn.Qu', 'Priya Sharma',    'owner',   1, '2026-04-21 09:46:17'),
+(6, 3, 'barista@commonground.cafe',  '$2y$12$JeQ/CXIOwyX6iotG1LPDleeA6X1ie0oRuytgjYld77JElTidQn.Qu', 'Tom Blackwell',   'barista', 1, '2026-04-21 09:46:17');
 
 -- ============================================================
 -- TABLE: qr_tokens

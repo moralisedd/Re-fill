@@ -12,11 +12,32 @@ Built with PHP 8.2, MySQL, and vanilla JavaScript. No frameworks — just clean,
 
 Use the demo accounts below to explore all three user roles without registering.
 
+**Customer**
+
 | Role | Email | Password |
 |------|-------|----------|
 | Customer | `demo@refill.app` | `Test@1234` |
+
+**The Daily Grind**
+
+| Role | Email | Password |
+|------|-------|----------|
 | Staff (Owner) | `owner@dailygrind.co.uk` | `Staff@1234` |
 | Staff (Barista) | `barista@dailygrind.co.uk` | `Staff@1234` |
+
+**Brew & Bloom**
+
+| Role | Email | Password |
+|------|-------|----------|
+| Staff (Owner) | `owner@brewandbloom.co.uk` | `Staff@1234` |
+| Staff (Barista) | `barista@brewandbloom.co.uk` | `Staff@1234` |
+
+**Common Ground**
+
+| Role | Email | Password |
+|------|-------|----------|
+| Staff (Owner) | `owner@commonground.cafe` | `Staff@1234` |
+| Staff (Barista) | `barista@commonground.cafe` | `Staff@1234` |
 
 ---
 
