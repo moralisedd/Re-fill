@@ -51,7 +51,7 @@ Use the demo accounts below to explore all three user roles without registering.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/refill.git
+git clone https://github.com/moralisedd/refill.git
 ```
 
 Place the cloned folder inside your XAMPP `htdocs` directory and rename it to `refill`:
