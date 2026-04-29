@@ -164,4 +164,4 @@ refill/
 
 ## 📄 Licence
 
-Built as a university assessment project (Sheffield Hallam University — Development Project 55-608850). Not licensed for commercial use.
+Built as a university assessment project. Not licensed for commercial use.
