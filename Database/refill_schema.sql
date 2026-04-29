@@ -57,6 +57,7 @@ CREATE TABLE `cafe_staff` (
 
 --
 -- Dumping data for table `cafe_staff`
+-- All passwords are: Staff@1234 (bcrypt cost-12)
 --
 
 INSERT INTO `cafe_staff` (`staff_id`, `cafe_id`, `email`, `password_hash`, `full_name`, `role`, `is_active`, `created_at`) VALUES
@@ -74,6 +75,8 @@ INSERT INTO `cafe_staff` (`staff_id`, `cafe_id`, `email`, `password_hash`, `full
 --   - Token expires after 60 seconds (expires_at)
 --   - Nonce ensures one-time use even if token is screenshotted
 --   - is_used flag prevents replay attacks
+--   - short_code is a 5-char uppercase code for manual staff entry
+--     (much easier to type than the 64-char hex token)
 -- ============================================================
 
 CREATE TABLE `qr_tokens` (
@@ -81,6 +84,7 @@ CREATE TABLE `qr_tokens` (
   `user_id`     int(10) UNSIGNED NOT NULL,
   `token_value` varchar(128)     NOT NULL,  -- cryptographically random (bin2hex)
   `nonce`       varchar(64)      NOT NULL,  -- separate one-time-use nonce
+  `short_code`  varchar(8)                DEFAULT NULL COMMENT '5-char uppercase code for manual staff entry (e.g. AB3K9)',
   `expires_at`  datetime         NOT NULL,  -- created_at + 60 seconds
   `is_used`     tinyint(1)       NOT NULL DEFAULT 0,
   `created_at`  datetime         NOT NULL DEFAULT current_timestamp()
@@ -88,6 +92,7 @@ CREATE TABLE `qr_tokens` (
 
 --
 -- Dumping data for table `qr_tokens`
+-- short_code is NULL for tokens generated before the column was added
 --
 
 INSERT INTO `qr_tokens` (`token_id`, `user_id`, `token_value`, `nonce`, `expires_at`, `is_used`, `created_at`) VALUES
@@ -257,6 +262,7 @@ CREATE TABLE `users` (
 
 --
 -- Dumping data for table `users`
+-- demo@refill.app password: Test@1234
 --
 
 INSERT INTO `users` (`user_id`, `email`, `password_hash`, `full_name`, `phone`, `points_balance`, `is_active`, `created_at`, `updated_at`) VALUES
@@ -353,14 +359,15 @@ ALTER TABLE `cafes`
 
 ALTER TABLE `cafe_staff`
   ADD PRIMARY KEY (`staff_id`),
-  ADD UNIQUE KEY `uq_staff_email`  (`email`),
-  ADD KEY `idx_staff_cafe_id`  (`cafe_id`),
+  ADD UNIQUE KEY `uq_staff_email`   (`email`),
+  ADD KEY `idx_staff_cafe_id`   (`cafe_id`),
   ADD KEY `idx_staff_is_active` (`is_active`);
 
 ALTER TABLE `qr_tokens`
   ADD PRIMARY KEY (`token_id`),
   ADD UNIQUE KEY `uq_qr_token_value` (`token_value`),
   ADD UNIQUE KEY `uq_qr_nonce`       (`nonce`),
+  ADD UNIQUE KEY `idx_short_code`    (`short_code`),   -- unique so two live tokens can't share a code
   ADD KEY `idx_qr_user_id` (`user_id`),
   ADD KEY `idx_qr_expires`  (`expires_at`),
   ADD KEY `idx_qr_is_used`  (`is_used`);
@@ -394,7 +401,7 @@ ALTER TABLE `users`
 --
 
 ALTER TABLE `cafes`        MODIFY `cafe_id`        int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-ALTER TABLE `cafe_staff`   MODIFY `staff_id`        int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+ALTER TABLE `cafe_staff`   MODIFY `staff_id`        int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 ALTER TABLE `qr_tokens`    MODIFY `token_id`        int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=89;
 ALTER TABLE `rewards`      MODIFY `reward_id`       int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 ALTER TABLE `transactions` MODIFY `transaction_id`  int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
@@ -425,7 +432,3 @@ ALTER TABLE `transactions`
     FOREIGN KEY (`user_id`)   REFERENCES `users`      (`user_id`)   ON UPDATE CASCADE;
 
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

@@ -34,7 +34,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <h1>Admin Panel — <?= htmlspecialchars($_SESSION['cafe_name'] ?? '') ?></h1>
 
-<div class="card-grid" style="margin-top:1.5rem;">
+<div class="card-grid card-grid--md">
     <div class="card stat-card">
         <div class="stat-value"><?= (int)($stats['total_customers'] ?? 0) ?></div>
         <div class="stat-label">Total customers</div>
@@ -53,9 +53,9 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<h2 style="margin-top:2rem;">Rewards catalogue</h2>
+<h2 class="section-heading">Rewards catalogue</h2>
 
-<div class="table-wrapper card" style="padding:0; margin-top:1rem;">
+<div class="table-wrapper card card-grid--sm">
     <table>
         <thead>
             <tr>
@@ -69,7 +69,7 @@ require_once __DIR__ . '/../includes/header.php';
             <tr>
                 <td>
                     <strong><?= htmlspecialchars($r['name']) ?></strong><br>
-                    <span style="font-size:.85rem; color:var(--colour-text-muted);"><?= htmlspecialchars($r['description'] ?? '') ?></span>
+                    <span class="reward-desc-sm"><?= htmlspecialchars($r['description'] ?? '') ?></span>
                 </td>
                 <td><?= (int)$r['points_required'] ?></td>
                 <td>
@@ -83,7 +83,7 @@ require_once __DIR__ . '/../includes/header.php';
     </table>
 </div>
 
-<p style="margin-top:1.5rem;">
+<p class="page-back">
     <a href="<?= BASE_URL ?>/staff/dashboard.php">← Back to staff dashboard</a>
 </p>
 

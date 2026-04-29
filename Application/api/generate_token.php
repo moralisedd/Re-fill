@@ -31,6 +31,8 @@ $token_data = generate_qr_token((int)$_SESSION['user_id']);
 
 // I return the pre-encoded JSON string as 'payload' so the client-side QR
 // library receives exactly the same format as the initial server-rendered QR.
+// short_code is included so any AJAX-refresh logic can update the manual entry
+// display — without it, the displayed short code goes stale after auto-refresh.
 echo json_encode([
     'payload'    => json_encode([
         'token' => $token_data['token_value'],
@@ -38,4 +40,5 @@ echo json_encode([
     ]),
     'expires_at' => $token_data['expires_at'],
     'expires_in' => $token_data['expires_in'],
+    'short_code' => $token_data['short_code'],
 ]);

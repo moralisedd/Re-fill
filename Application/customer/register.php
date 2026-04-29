@@ -64,11 +64,11 @@ $page_title = 'Create account';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div style="max-width:480px; margin:0 auto;">
+<div class="page-narrow">
     <h1>Create your Re-fill account</h1>
     <p>Already have one? <a href="<?= BASE_URL ?>/customer/login.php">Log in</a></p>
 
-    <form method="post" action="" novalidate style="margin-top:1.5rem;">
+    <form method="post" action="" novalidate class="form-body">
 
         <div class="form-group">
             <label for="full_name">Full name</label>
@@ -95,7 +95,7 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
 
         <div class="form-group">
-            <label for="phone">Phone number <span style="font-weight:400; color:var(--colour-text-muted);">(optional)</span></label>
+            <label for="phone">Phone number <span class="label-optional">(optional)</span></label>
             <input type="tel" id="phone" name="phone"
                    value="<?= htmlspecialchars($values['phone']) ?>"
                    autocomplete="tel">
@@ -108,7 +108,7 @@ require_once __DIR__ . '/../includes/header.php';
                    aria-required="true"
                    aria-describedby="password-hint"
                    <?= isset($errors['password']) ? 'aria-invalid="true"' : '' ?>>
-            <span id="password-hint" style="font-size:.8rem; color:var(--colour-text-muted);">
+            <span id="password-hint" class="field-hint">
                 Min. 8 characters, including uppercase, lowercase, number, and special character.
             </span>
             <?php if (isset($errors['password'])): ?>
@@ -127,7 +127,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php endif; ?>
         </div>
 
-        <button type="submit" style="width:100%;">Create account</button>
+        <button type="submit" class="btn-block">Create account</button>
     </form>
 </div>
 

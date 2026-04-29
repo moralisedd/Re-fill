@@ -7,27 +7,25 @@
  * Every page loads this indirectly through db.php -> config.php.
  */
 
-// ── Timezone ─────────────────────────────────────────────────
-// I lock PHP to UTC so date() outputs always match MySQL's NOW() when the
-// MySQL session is also set to UTC (done in db.php). Without this, PHP on a
-// BST/local-timezone server generates datetime strings that are hours ahead of
-// MySQL's UTC clock — causing tokens to stay valid long after they should expire.
+// Lock PHP to UTC so date() always matches MySQL's NOW().
+// Without this, a BST/local-timezone server produces timestamps hours ahead of
+// MySQL's UTC clock, causing tokens to outlive their intended expiry.
 date_default_timezone_set('UTC');
 
-// ── Base URL ─────────────────────────────────────────────────
-// I use a constant rather than a relative path because the app lives in a
-// subdirectory (/refill/) on XAMPP. On a production root domain, set this to ''.
+// BASE_URL is a constant rather than a relative path because the app lives in a
+// subdirectory (/refill/) on XAMPP. Set to '' on a production root domain.
 define('BASE_URL', '/refill');
 
-// ── App settings ─────────────────────────────────────────────
 define('APP_NAME',    'Re-fill');
 define('APP_VERSION', '1.0.0');
-// APP_ENV controls error display — I never want stack traces visible in production
 define('APP_ENV',     'development'); // Change to 'production' before deploying
 
-// ── Error reporting ──────────────────────────────────────────
-// I suppress all output in production so PHP errors don't leak internal paths
-// or stack traces to users (a common information disclosure vulnerability).
+// REDEMPTION_SECRET signs reward QR payloads with HMAC-SHA256.
+// Staff-side validation re-computes the HMAC, so a tampered payload is rejected
+// before any DB work. Move this to an environment variable in production.
+define('REDEMPTION_SECRET', 'rfill_redm_k3y_changeme_in_prod_a9b2c7d4e1f8');
+
+// Suppress error output in production to prevent path/stack-trace leaks.
 if (APP_ENV === 'development') {
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);

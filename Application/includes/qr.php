@@ -6,8 +6,7 @@
  *  - The customer generates a token on their own device
  *  - Staff scan or manually enter the code to validate the transaction
  *  - Tokens expire after 60 seconds to prevent screenshot abuse
- *  - Each token has a single-use nonce — so even if someone screenshots
- *    a valid token, it can't be replayed after one use
+ *  - Each token has a single-use nonce; replay is blocked even if someone screenshots it
  *
  * I use random_bytes() for all token/nonce generation because it draws from
  * the OS CSPRNG. rand() and mt_rand() are NOT cryptographically secure.
@@ -38,34 +37,29 @@ function generate_qr_token(int $user_id): array {
     $token_value = bin2hex(random_bytes(32));
     $nonce       = bin2hex(random_bytes(16));
 
-    // I compute expires_at with gmdate() which always outputs UTC regardless of the
-    // server's local clock — it is the PHP equivalent of MySQL's UTC_TIMESTAMP().
-    //
-    // A previous attempt used NOW() + INTERVAL ? SECOND directly in the INSERT, but
-    // MySQL's binary prepared-statement protocol (required when EMULATE_PREPARES=false)
-    // does not support INTERVAL with a bound placeholder. The parameter silently binds
-    // as NULL, the INSERT stores an invalid expiry, and LAST_INSERT_ID() then returns
-    // a stale ID from an earlier session — pulling an old token row that is already
-    // expired, which is why the QR page showed "Expired" immediately on load.
-    //
-    // Timezone consistency is guaranteed by two other layers:
-    //   1. config.php — date_default_timezone_set('UTC'): PHP date functions → UTC
-    //   2. db.php     — SET time_zone = '+00:00':         MySQL NOW()        → UTC
-    // Both sides of the expires_at > NOW() comparison in validate_qr_token() now
-    // operate on the same UTC clock.
+    // 6-char uppercase hex code — far easier to type than the full 64-char token.
+    // 16M combinations with a 60-second window and one-time-use is sufficient entropy.
+    $short_code  = strtoupper(bin2hex(random_bytes(3)));
+
+    // I compute expires_at in PHP with gmdate() rather than MySQL's NOW() + INTERVAL
+    // because EMULATE_PREPARES=false uses the binary protocol, which doesn't support
+    // INTERVAL with a bound placeholder — the value silently binds as NULL, producing
+    // an immediately-expired token. gmdate() always outputs UTC, which matches MySQL's
+    // clock (guaranteed by config.php date_default_timezone_set and db.php SET time_zone).
     $expires_at = gmdate('Y-m-d H:i:s', time() + QR_TOKEN_TTL_SECONDS);
 
     $stmt = $pdo->prepare(
-        'INSERT INTO qr_tokens (user_id, token_value, nonce, expires_at)
-         VALUES (?, ?, ?, ?)'
+        'INSERT INTO qr_tokens (user_id, token_value, nonce, expires_at, short_code)
+         VALUES (?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$user_id, $token_value, $nonce, $expires_at]);
+    $stmt->execute([$user_id, $token_value, $nonce, $expires_at, $short_code]);
 
     return [
         'token_value' => $token_value,
         'nonce'       => $nonce,
         'expires_at'  => $expires_at,
         'expires_in'  => QR_TOKEN_TTL_SECONDS,
+        'short_code'  => $short_code,
     ];
 }
 

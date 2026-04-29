@@ -40,15 +40,15 @@ $page_title = 'Staff Dashboard';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+<div class="page-header">
     <div>
         <h1><?= htmlspecialchars($_SESSION['cafe_name'] ?? 'Cafe') ?></h1>
-        <p style="color:var(--colour-text-muted);">Welcome, <?= htmlspecialchars($_SESSION['staff_name']) ?> &bull; <?= ucfirst($_SESSION['staff_role']) ?></p>
+        <p>Welcome, <?= htmlspecialchars($_SESSION['staff_name']) ?> &bull; <?= ucfirst($_SESSION['staff_role']) ?></p>
     </div>
-    <a href="<?= BASE_URL ?>/staff/scan.php" class="btn-primary" style="font-size:1.1rem; padding:.75rem 1.5rem;">📷 Scan QR Code</a>
+    <a href="<?= BASE_URL ?>/staff/scan.php" class="btn-primary btn-primary-lg">📷 Scan QR Code</a>
 </div>
 
-<div class="card-grid" style="margin-top:1.5rem;">
+<div class="card-grid card-grid--md">
     <div class="card stat-card">
         <div class="stat-value"><?= (int)($stats['total_scans'] ?? 0) ?></div>
         <div class="stat-label">Scans today</div>
@@ -63,12 +63,12 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<h2 style="margin-top:2rem;">Recent transactions</h2>
+<h2 class="section-heading">Recent transactions</h2>
 
 <?php if (empty($recent)): ?>
     <div class="alert alert-info">No transactions yet today.</div>
 <?php else: ?>
-    <div class="table-wrapper card" style="padding:0; margin-top:1rem;">
+    <div class="table-wrapper card card-grid--sm">
         <table>
             <thead>
                 <tr>
@@ -98,7 +98,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 <?php endif; ?>
 
-<p style="margin-top:1rem;">
+<p class="page-back">
     <a href="<?= BASE_URL ?>/staff/logout.php">Log out</a>
     <?php if ($_SESSION['staff_role'] === 'owner'): ?>
      &bull; <a href="<?= BASE_URL ?>/admin/index.php">Admin panel →</a>

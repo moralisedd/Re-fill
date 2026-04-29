@@ -15,13 +15,21 @@ $user = $pdo->prepare('SELECT * FROM users WHERE user_id = ?');
 $user->execute([$uid]);
 $user = $user->fetch();
 
-// I JOIN cafes so I can show the cafe name without a second query per row
+// I JOIN cafes for name + city and use a window function to compute the
+// running balance after each transaction — otherwise every row shows the
+// same current balance, which makes the history column misleading.
 $recent = $pdo->prepare(
-    'SELECT t.*, c.name AS cafe_name
+    'SELECT t.transaction_id, t.created_at, t.transaction_type, t.points_delta,
+            c.name AS cafe_name, c.city AS cafe_city, c.address AS cafe_address,
+            SUM(t.points_delta) OVER (
+                PARTITION BY t.user_id
+                ORDER BY t.created_at ASC, t.transaction_id ASC
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+            ) AS balance_after
      FROM transactions t
      JOIN cafes c ON t.cafe_id = c.cafe_id
      WHERE t.user_id = ?
-     ORDER BY t.created_at DESC
+     ORDER BY t.created_at DESC, t.transaction_id DESC
      LIMIT 5'
 );
 $recent->execute([$uid]);
@@ -33,32 +41,43 @@ require_once __DIR__ . '/../includes/header.php';
 
 <h1>Welcome back, <?= htmlspecialchars(explode(' ', $user['full_name'])[0]) ?>!</h1>
 
-<div class="card-grid" style="margin-top:1.5rem;">
-    <div class="card stat-card">
+<!-- Points balance — centred hero so the number is the first thing the
+     customer sees, not competing for space with the QR/rewards links. -->
+<div class="d-flex justify-content-center mt-4 mb-4">
+    <div class="card stat-card text-center stat-card--balance">
         <div class="stat-value"><?= (int)$user['points_balance'] ?></div>
         <div class="stat-label">Points balance</div>
     </div>
-    <div class="card" style="display:flex; align-items:center; justify-content:center; flex-direction:column; gap:.75rem; text-align:center; padding:1.75rem;">
-        <p style="margin:0; font-size:.95rem;">Show your QR code at any participating cafe to earn a point.</p>
-        <a href="<?= BASE_URL ?>/customer/qr.php" class="btn-primary">Generate my QR code</a>
+</div>
+
+<!-- Action cards — Bootstrap row: stacked on mobile, side by side on sm+ -->
+<div class="row g-3 mb-2">
+    <div class="col-12 col-sm-6">
+        <div class="card h-100 d-flex flex-column align-items-center justify-content-center text-center action-card">
+            <p class="action-card-text">Show your QR code at any participating cafe to earn a point.</p>
+            <a href="<?= BASE_URL ?>/customer/qr.php" class="btn-primary">Generate my QR code</a>
+        </div>
     </div>
-    <div class="card" style="display:flex; align-items:center; justify-content:center; flex-direction:column; gap:.75rem; text-align:center; padding:1.75rem;">
-        <p style="margin:0; font-size:.95rem;">Ready to treat yourself? Redeem your points for a free drink.</p>
-        <a href="<?= BASE_URL ?>/customer/rewards.php" class="btn-secondary">Browse rewards</a>
+    <div class="col-12 col-sm-6">
+        <div class="card h-100 d-flex flex-column align-items-center justify-content-center text-center action-card">
+            <p class="action-card-text">Ready to treat yourself? Redeem your points for a free drink.</p>
+            <a href="<?= BASE_URL ?>/customer/rewards.php" class="btn-secondary">Browse rewards</a>
+        </div>
     </div>
 </div>
 
-<h2 style="margin-top:2rem;">Recent activity</h2>
+<h2 class="section-heading">Recent activity</h2>
 
 <?php if (empty($recent)): ?>
     <div class="alert alert-info">No activity yet — visit a cafe and scan your QR code to earn your first point!</div>
 <?php else: ?>
-    <div class="table-wrapper card" style="padding:0; margin-top:1rem;">
+    <div class="table-wrapper card card-grid--sm">
         <table>
             <thead>
                 <tr>
                     <th scope="col">Date</th>
                     <th scope="col">Cafe</th>
+                    <th scope="col">Location</th>
                     <th scope="col">Type</th>
                     <th scope="col">Points</th>
                     <th scope="col">Balance</th>
@@ -69,6 +88,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <tr>
                     <td><?= date('d M Y, H:i', strtotime($tx['created_at'])) ?></td>
                     <td><?= htmlspecialchars($tx['cafe_name']) ?></td>
+                    <td class="td-meta"><?= htmlspecialchars($tx['cafe_city']) ?></td>
                     <td>
                         <?php if ($tx['transaction_type'] === 'earn'): ?>
                             <span class="badge badge-green">Earned</span>
@@ -77,13 +97,13 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php endif; ?>
                     </td>
                     <td><?= $tx['points_delta'] > 0 ? '+' . $tx['points_delta'] : $tx['points_delta'] ?></td>
-                    <td><?= (int)$user['points_balance'] ?></td>
+                    <td><?= (int)$tx['balance_after'] ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
     </div>
-    <p style="margin-top:.75rem;"><a href="<?= BASE_URL ?>/customer/history.php">View full history →</a></p>
+    <p class="page-back"><a href="<?= BASE_URL ?>/customer/history.php">View full history →</a></p>
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

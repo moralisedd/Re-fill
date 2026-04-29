@@ -32,7 +32,7 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if (empty($history)): ?>
     <div class="alert alert-info">You haven't made any transactions yet.</div>
 <?php else: ?>
-    <div class="table-wrapper card" style="padding:0; margin-top:1.5rem;">
+    <div class="table-wrapper card card-grid--md">
         <table>
             <thead>
                 <tr>
@@ -54,7 +54,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <span class="badge badge-amber">Redeemed</span>
                         <?php endif; ?>
                     </td>
-                    <td style="font-weight:600; color:<?= $tx['points_delta'] > 0 ? 'var(--colour-success)' : 'var(--colour-error)' ?>">
+                    <td class="<?= $tx['points_delta'] > 0 ? 'points-positive' : 'points-negative' ?>">
                         <?= $tx['points_delta'] > 0 ? '+' . $tx['points_delta'] : $tx['points_delta'] ?>
                     </td>
                 </tr>

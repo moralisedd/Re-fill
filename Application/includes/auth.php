@@ -10,24 +10,22 @@
 
 require_once __DIR__ . '/db.php';
 
-// ── Session hardening ────────────────────────────────────────────────────────
-// I set these before session_start() so they apply to every page load.
-// httponly blocks JavaScript from reading the session cookie (XSS mitigation).
-// strict_mode rejects any session ID not created by the server — prevents fixation.
+// Session hardening: set before session_start() so they apply on every request.
+// httponly keeps the cookie out of JS (XSS mitigation).
+// strict_mode rejects session IDs not issued by this server, preventing fixation.
+// cookie_secure is conditional: production enforces HTTPS-only cookie delivery.
 ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_secure',   '0');    // Flip to '1' when running on HTTPS
+ini_set('session.cookie_secure',   defined('APP_ENV') && APP_ENV === 'production' ? '1' : '0');
 ini_set('session.use_strict_mode', '1');
-ini_set('session.gc_maxlifetime',  '3600'); // 1-hour idle timeout
+ini_set('session.gc_maxlifetime',  '3600');
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ── Customer authentication ──────────────────────────────────────────────────
-
 /**
  * Attempt to log in a customer by email and password.
- * I regenerate the session ID on success to prevent session fixation attacks.
+ * Session ID is regenerated on success to prevent fixation attacks.
  * Returns the user row (minus the password hash) on success, false on failure.
  */
 function customer_login(string $email, string $password): array|false {
@@ -50,8 +48,8 @@ function customer_login(string $email, string $password): array|false {
 
 /**
  * Attempt to log in a cafe staff member.
- * I JOIN cafes here so the staff session carries the cafe name — avoids
- * an extra query on every page that needs to display the cafe name.
+ * JOIN cafes at login so the session carries the cafe name, avoiding an extra
+ * query on every page that needs to display it.
  */
 function staff_login(string $email, string $password): array|false {
     $pdo  = get_db();
@@ -96,9 +94,8 @@ function logout(): void {
     session_destroy();
 }
 
-// ── Access guards ────────────────────────────────────────────────────────────
-// I call these at the top of every protected page — they redirect and exit
-// immediately so no page content ever renders for unauthenticated users.
+// Access guards: called at the top of every protected page.
+// They redirect and exit immediately so no content renders for unauthenticated users.
 
 function require_customer(): void {
     if (empty($_SESSION['user_id'])) {
@@ -115,9 +112,9 @@ function require_staff(): void {
 }
 
 /**
- * Owner-only guard — used by the admin panel.
- * I check staff auth first, then role. A barista who somehow hit this URL
- * gets a 403, not a redirect, so they know access was denied not just lost.
+ * Owner-only guard for the admin panel.
+ * Checks staff auth first, then role. A barista hitting this URL gets a 403
+ * rather than a redirect so the denial is explicit, not silent.
  */
 function require_owner(): void {
     require_staff();
@@ -135,20 +132,18 @@ function is_logged_in_staff(): bool {
     return !empty($_SESSION['staff_id']);
 }
 
-// ── Password utilities ───────────────────────────────────────────────────────
-
 /**
  * Hash a password with bcrypt at cost 12.
- * Cost 12 is the OWASP-recommended minimum for bcrypt — slow enough to resist
- * brute force but fast enough not to noticeably impact login performance.
+ * Cost 12 meets the OWASP minimum: slow enough to resist brute force,
+ * fast enough to not noticeably affect login latency.
  */
 function hash_password(string $plain): string {
     return password_hash($plain, PASSWORD_BCRYPT, ['cost' => 12]);
 }
 
 /**
- * Enforce a minimum password policy: ≥8 chars with upper, lower, digit, and special.
- * I use a regex here rather than multiple strlen/preg_match calls — one pass is cleaner.
+ * Enforce minimum password policy: 8+ chars with upper, lower, digit, and special.
+ * Single regex is cleaner than separate strlen/preg_match calls.
  */
 function is_strong_password(string $plain): bool {
     return preg_match(

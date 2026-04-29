@@ -1,9 +1,13 @@
 <?php
 /**
  * Re-fill — Staff QR Scan Page
- * Camera scanning uses html5-qrcode (mebjas/html5-qrcode), which works via
- * getUserMedia + canvas internally — no BarcodeDetector or browser flags needed.
- * Manual token entry remains as a fallback and for the video demo.
+ *
+ * JS is split into two independent scripts so the camera can never block
+ * manual entry:
+ *   1. Camera script — auto-loads html5-qrcode CDN on page load and asks for
+ *      camera permission immediately, matching the original UX.
+ *   2. Manual form script — completely self-contained; works regardless of
+ *      CDN availability, camera permission, or any camera-side errors.
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_staff();
@@ -12,130 +16,115 @@ $page_title = 'Scan QR Code';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div style="max-width:540px; margin:0 auto;">
+<div class="page-scan">
     <h1>Scan customer QR</h1>
-    <p>Point the camera at the customer's Re-fill QR code, or type the code manually.</p>
+    <p class="page-meta">
+        Point the camera at the customer's QR code, or enter their short code manually below.
+    </p>
 
-    <!-- Success/error message area — JS populates this after API response -->
-    <div id="scan-result" role="alert" aria-live="assertive" style="min-height:2rem; margin:1rem 0;"></div>
+    <!-- Result area — populated by JS after API call -->
+    <div id="scan-result" class="scan-result" role="alert" aria-live="assertive"></div>
 
-    <!-- html5-qrcode mounts its own video element inside this div -->
-    <div class="card" style="padding:1rem; text-align:center;">
+    <!-- Camera viewfinder (shown above manual entry) -->
+    <div class="card card--compact mb-3">
         <div id="camera-view"
-             style="width:100%; max-width:400px; margin:0 auto;"
+             class="camera-view"
              aria-label="Camera viewfinder for scanning QR codes"></div>
-        <p id="camera-status" style="margin-top:.5rem; font-size:.85rem; color:var(--colour-text-muted);">
-            Starting camera…
+        <p id="camera-status" class="camera-status">Starting camera…</p>
+    </div>
+
+    <hr class="scan-divider">
+
+    <!-- Manual short code entry -->
+    <div class="card">
+        <h2 class="card-subheading">Or enter the code manually</h2>
+        <form id="manual-form" class="d-flex gap-2" novalidate>
+            <input type="text" id="manual-token" name="token"
+                   placeholder="e.g. 9CB9FA"
+                   class="token-input"
+                   autocomplete="off"
+                   aria-label="Customer short code or token">
+            <button type="submit" class="btn-primary" id="manual-btn">Validate</button>
+        </form>
+        <p class="scan-hint">
+            The short code is shown beneath the customer's QR on their screen.
         </p>
     </div>
 
-    <hr style="margin:1.5rem 0; border:none; border-top:1px solid var(--colour-border);">
-
-    <h2 style="font-size:1rem;">Or enter the code manually</h2>
-    <form id="manual-form" style="display:flex; gap:.75rem; margin-top:.75rem;" novalidate>
-        <input type="text" id="manual-token" name="token"
-               placeholder="Paste token value here"
-               style="flex:1;"
-               aria-label="Token value from QR code">
-        <button type="submit" class="btn-primary">Validate</button>
-    </form>
-
-    <p style="margin-top:1.5rem;"><a href="<?= BASE_URL ?>/staff/dashboard.php">← Back to dashboard</a></p>
+    <p class="page-back">
+        <a href="<?= BASE_URL ?>/staff/dashboard.php">← Back to dashboard</a>
+    </p>
 </div>
 
-<!--
-    html5-qrcode CDN — works on Chrome, Brave, Firefox, Safari and Edge without
-    experimental flags. Uses getUserMedia + canvas, not BarcodeDetector.
--->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
+<!-- Script 1: Camera — CDN injected dynamically so a Brave Shields block
+     never prevents the manual form below from working. -->
 <script>
 (function () {
-  const API_URL  = '<?= BASE_URL ?>/api/validate.php';
-  const resultEl = document.getElementById('scan-result');
-  const statusEl = document.getElementById('camera-status');
-  let   scanning = false;
-  let   scanner  = null;
+  'use strict';
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+  var VALIDATE_URL = '<?= BASE_URL ?>/api/validate.php';
+  var REDEEM_URL   = '<?= BASE_URL ?>/api/redeem_qr.php';
+  var statusEl     = document.getElementById('camera-status');
+  var scanning     = false;
+  var scanner      = null;
 
-  function showResult(data) {
-    if (data.success) {
-      resultEl.innerHTML =
-        `<div class="alert alert-success">
-           ✅ <strong>${escHtml(data.customer_name)}</strong> —
-           +${data.points_awarded} point awarded!
-           New balance: <strong>${data.points_balance}</strong>.
-         </div>`;
-      // Stop the scanner after a valid scan so the staff member sees the result
-      if (scanner) scanner.stop().catch(() => {});
-      statusEl.textContent = 'Scan complete. Refresh the page to scan again.';
-    } else {
-      resultEl.innerHTML =
-        `<div class="alert alert-error">❌ ${escHtml(data.error)}</div>`;
-      // Allow another attempt after a failed validation
-      scanning = false;
-    }
-  }
-
-  // ── Validate token via API ──────────────────────────────────────────────────
-  async function validatePayload(jsonPayload) {
+  // Route camera-decoded QR payload to validate (earn) or redeem endpoint
+  function validatePayload(jsonPayload) {
     if (scanning) return;
     scanning = true;
 
-    let parsed;
+    var parsed;
     try {
       parsed = JSON.parse(jsonPayload);
-    } catch {
-      showResult({ success: false, error: 'Invalid QR code format.' });
+    } catch (err) {
+      if (window.Refill && window.Refill.showResult) {
+        window.Refill.showResult({ success: false, error: 'Invalid QR code format.' }, 'earn');
+      }
+      scanning = false;
       return;
     }
 
-    try {
-      const res  = await fetch(API_URL, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ token: parsed.token, nonce: parsed.nonce }),
+    var url, body, action;
+    if (parsed.action === 'redeem') {
+      url    = REDEEM_URL;
+      action = 'redeem';
+      body   = JSON.stringify({
+        user_id:   parsed.user_id,
+        reward_id: parsed.reward_id,
+        expires:   parsed.expires,
+        sig:       parsed.sig,
       });
-      const data = await res.json();
-      showResult(data);
-    } catch {
-      showResult({ success: false, error: 'Network error. Please try again.' });
+    } else {
+      url    = VALIDATE_URL;
+      action = 'earn';
+      body   = JSON.stringify({ token: parsed.token, nonce: parsed.nonce });
     }
+
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (window.Refill && window.Refill.showResult) {
+          window.Refill.showResult(data, action);
+        }
+        if (data.success && scanner) {
+          scanner.stop().catch(function () {});
+          statusEl.textContent = 'Scan complete. Refresh the page to scan again.';
+        } else {
+          scanning = false;
+        }
+      })
+      .catch(function () {
+        if (window.Refill && window.Refill.showResult) {
+          window.Refill.showResult({ success: false, error: 'Network error. Please try again.' }, action);
+        }
+        scanning = false;
+      });
   }
 
-  // ── Manual form ─────────────────────────────────────────────────────────────
-  document.getElementById('manual-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const raw = document.getElementById('manual-token').value.trim();
-    if (!raw) return;
-    // Manual entry — nonce is omitted; the server looks it up from the DB
-    try {
-      const res  = await fetch(API_URL, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ token: raw }),
-      });
-      const data = await res.json();
-      showResult(data);
-    } catch {
-      showResult({ success: false, error: 'Network error. Please try again.' });
-    }
-  });
-
-  // ── Camera scanning via html5-qrcode ────────────────────────────────────────
-  // I switched from BarcodeDetector (Chromium-only, needs a flag on Windows) to
-  // html5-qrcode because it works on Chrome, Brave, Firefox and Safari with no
-  // config changes — it uses getUserMedia + canvas decoding internally.
-  function startCamera() {
+  // Initialise html5-qrcode once the CDN script has loaded
+  function initCamera() {
     if (typeof Html5Qrcode === 'undefined') {
-      statusEl.textContent = 'QR scanner library failed to load — check your internet connection. Use manual entry below.';
+      statusEl.textContent = 'Camera library failed to load. Use manual entry below.';
       return;
     }
 
@@ -147,39 +136,121 @@ require_once __DIR__ . '/../includes/header.php';
           statusEl.textContent = 'No camera found. Use manual entry below.';
           return Promise.reject('no cameras');
         }
-
-        // Prefer rear-facing camera on phones; on a laptop the only camera is used
+        // Prefer rear-facing on mobile; falls back to whatever is available
         return scanner.start(
           { facingMode: 'environment' },
-          {
-            fps:   10,
-            qrbox: { width: 250, height: 250 }
-          },
-          function (decodedText) {
-            // Called every time a QR is decoded — scanning flag prevents
-            // duplicate API calls while awaiting the server response
-            validatePayload(decodedText);
-          },
-          function () {
-            // Per-frame errors fire when no QR is in frame — this is normal, ignore
-          }
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          function (decodedText) { validatePayload(decodedText); },
+          function () { /* per-frame misses are normal — ignore */ }
         );
       })
       .then(function () {
-        statusEl.textContent = 'Camera active — point at the QR code.';
+        statusEl.textContent = 'Camera active — point at the customer\'s QR code.';
       })
       .catch(function (err) {
-        if (err === 'no cameras') return; // already handled above
-        var msg = String(err);
-        if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('notallowed')) {
-          statusEl.textContent = 'Camera permission denied — allow camera access in browser settings, then refresh.';
+        if (err === 'no cameras') return;
+        var msg = String(err).toLowerCase();
+        if (msg.includes('permission') || msg.includes('notallowed')) {
+          statusEl.textContent = 'Camera permission denied. Allow access in your browser settings, or use manual entry below.';
         } else {
-          statusEl.textContent = 'Camera unavailable (' + msg + '). Use manual entry below.';
+          statusEl.textContent = 'Camera unavailable. Use manual entry below.';
         }
       });
   }
 
-  startCamera();
+  // I load the CDN dynamically rather than with a static <script src> so that
+  // if it's blocked (e.g. Brave Shields), the onerror fires here only and
+  // never interferes with the manual form script below.
+  var script       = document.createElement('script');
+  script.src       = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+  script.crossOrigin = 'anonymous';
+  script.onload    = function () { initCamera(); };
+  script.onerror   = function () {
+    statusEl.textContent = 'Camera library blocked or unavailable. Use manual entry below.';
+  };
+  document.head.appendChild(script);
+
+})();
+</script>
+
+<!-- Script 2: Manual form — standalone, zero dependency on the camera script.
+     window.Refill.showResult is defined here; the camera script calls it too. -->
+<script>
+(function () {
+  'use strict';
+
+  var VALIDATE_URL = '<?= BASE_URL ?>/api/validate.php';
+  var resultEl     = document.getElementById('scan-result');
+  var form         = document.getElementById('manual-form');
+  var input        = document.getElementById('manual-token');
+  var btn          = document.getElementById('manual-btn');
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Shared result renderer — also used by the camera script via window.Refill
+  window.Refill = window.Refill || {};
+  window.Refill.showResult = function (data, action) {
+    if (data.success) {
+      if (action === 'redeem') {
+        resultEl.innerHTML =
+          '<div class="alert alert-success">' +
+          '✅ Reward redeemed! <strong>' + escHtml(data.reward_name) + '</strong> — ' +
+          data.points_used + ' point' + (data.points_used !== 1 ? 's' : '') + ' deducted. ' +
+          'New balance: <strong>' + data.new_balance + '</strong>.' +
+          '</div>';
+      } else {
+        resultEl.innerHTML =
+          '<div class="alert alert-success">' +
+          '✅ <strong>' + escHtml(data.customer_name) + '</strong> — ' +
+          '+' + data.points_awarded + ' point awarded! ' +
+          'New balance: <strong>' + data.points_balance + '</strong>.' +
+          '</div>';
+      }
+    } else {
+      resultEl.innerHTML =
+        '<div class="alert alert-error">❌ ' + escHtml(data.error) + '</div>';
+    }
+  };
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var raw = input.value.trim();
+    if (!raw) { input.focus(); return; }
+
+    // Disable button during the request — prevents double-submits
+    btn.disabled    = true;
+    btn.textContent = 'Validating…';
+    resultEl.innerHTML = '';
+
+    // Short codes (≤8 chars) and full tokens both go to validate.php —
+    // the server detects the format and handles each case accordingly.
+    fetch(VALIDATE_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ token: raw }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        window.Refill.showResult(data, 'earn');
+        if (data.success) { input.value = ''; }
+      })
+      .catch(function () {
+        window.Refill.showResult(
+          { success: false, error: 'Network error. Check your connection and try again.' },
+          'earn'
+        );
+      })
+      .finally(function () {
+        btn.disabled    = false;
+        btn.textContent = 'Validate';
+      });
+  });
+
 })();
 </script>
 

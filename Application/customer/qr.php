@@ -25,11 +25,11 @@ $load_qr_lib = true;
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div style="max-width:480px; margin:0 auto; text-align:center;">
+<div class="page-qr">
     <h1>Your Re-fill QR Code</h1>
     <p>Show this to the barista when you order with your reusable cup.</p>
 
-    <div class="card qr-wrapper" style="margin-top:1.5rem;">
+    <div class="card qr-wrapper qr-card">
         <!-- QR code rendered here by qrcodejs -->
         <div id="qr-container" aria-label="Your QR code for Re-fill loyalty scan" role="img"></div>
 
@@ -37,7 +37,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?= QR_TOKEN_TTL_SECONDS ?>s
         </div>
 
-        <p style="color:var(--colour-text-muted); font-size:.875rem;">
+        <p class="qr-refresh-text">
             This code refreshes every 60 seconds to keep your account secure.
         </p>
 
@@ -46,25 +46,22 @@ require_once __DIR__ . '/../includes/header.php';
         </button>
     </div>
 
-    <!-- Demo helper: lets me copy the token value for manual entry on the staff scan page -->
-    <details style="margin-top:1rem; text-align:left; background:var(--colour-bg-alt,#1f2937); border:1px solid var(--colour-border); border-radius:var(--radius); padding:.75rem 1rem;">
-        <summary style="cursor:pointer; font-size:.85rem; color:var(--colour-text-muted);">
-            🔧 Demo: show token for manual entry
-        </summary>
-        <p style="font-size:.8rem; color:var(--colour-text-muted); margin:.5rem 0 .25rem;">
-            Staff can paste this token into the "Or enter the code manually" box on the scan page.
-        </p>
-        <div style="display:flex; gap:.5rem; align-items:center; margin-top:.5rem;">
-            <input id="demo-token-display" type="text" readonly
-                   style="flex:1; font-family:var(--font-mono,monospace); font-size:.75rem; padding:.4rem;"
-                   value="<?= htmlspecialchars($token_data['token_value']) ?>"
-                   aria-label="Token value for manual entry">
-            <button class="btn-secondary" style="padding:.4rem .75rem; font-size:.8rem;"
-                    onclick="var el=document.getElementById('demo-token-display');el.select();document.execCommand('copy');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500);">
+    <!-- Short code for manual staff entry — much easier to type than the full token -->
+    <div class="short-code-section">
+        <p class="short-code-label">Or give staff this code to enter manually:</p>
+        <div class="short-code-box">
+            <span id="short-code-display"
+                  class="short-code-value"
+                  aria-label="Short entry code">
+                <?= htmlspecialchars($token_data['short_code']) ?>
+            </span>
+            <button class="btn-secondary btn-copy"
+                    aria-label="Copy short code"
+                    onclick="navigator.clipboard.writeText('<?= htmlspecialchars($token_data['short_code']) ?>').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)}).catch(()=>{this.textContent='Copy failed'});">
                 Copy
             </button>
         </div>
-    </details>
+    </div>
 </div>
 
 <script>
@@ -73,20 +70,12 @@ require_once __DIR__ . '/../includes/header.php';
   const expiresAt = '<?= $expires_iso ?>';  // ISO 8601 — parses correctly in all browsers
   const container = document.getElementById('qr-container');
 
-  // I log these so I can debug via F12 Console if the QR doesn't render
-  console.log('[Re-fill QR] payload length:', payload.length);
-  console.log('[Re-fill QR] expiresAt:', expiresAt);
-  console.log('[Re-fill QR] QRCode available:', typeof QRCode !== 'undefined');
-
   function showError(msg) {
-    container.innerHTML =
-      '<p style="color:var(--colour-error,#ef4444);padding:1rem;">' + msg + '</p>';
+    container.innerHTML = '<p class="qr-error">' + msg + '</p>';
   }
 
   if (typeof QRCode === 'undefined') {
-    showError('QR library failed to load. Copy ' +
-      '<code>assets/js/qrcode.min.js</code> to ' +
-      '<code>C:\\xampp\\htdocs\\refill\\assets\\js\\</code> and refresh.');
+    showError('QR code could not be generated. Please refresh the page or contact support.');
   } else {
     try {
       new QRCode(container, {
@@ -97,11 +86,9 @@ require_once __DIR__ . '/../includes/header.php';
         colorLight:   '#ffffff',
         correctLevel: QRCode.CorrectLevel.M
       });
-      console.log('[Re-fill QR] QR code rendered successfully.');
     } catch (err) {
-      // I wrap this in try/catch because qrcodejs throws on empty/null text
-      console.error('[Re-fill QR] QRCode constructor threw:', err);
-      showError('QR code generation failed: ' + err.message);
+      // qrcodejs throws if text is empty or null, so I wrap the constructor
+      showError('QR code generation failed. Please refresh the page.');
     }
   }
 

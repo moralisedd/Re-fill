@@ -3,15 +3,10 @@
  * Re-fill — QR Token Validation API
  *
  * POST /api/validate.php
- * Content-Type: application/json
- * Body: { "token": "<token_value>", "nonce": "<nonce>" }
+ * Body (JSON): { "token": string, "nonce"?: string }
  *
- * Security controls applied:
- *  - Staff session required (no unauthenticated calls)
- *  - Rate limiting via DB (max 10 failed attempts per minute per staff)
- *  - PDO prepared statements throughout (SQL injection prevention)
- *  - CORS headers locked to same origin
- *  - No verbose errors returned to client
+ * Accepts a full 64-char token+nonce (camera scan) or a short code up to 8
+ * chars (manual staff entry). Staff session required; no verbose errors exposed.
  */
 
 declare(strict_types=1);
@@ -19,26 +14,22 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/qr.php';
 
-// ── Content-type & CORS ──────────────────────────────────────────────────────
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 
-// Only accept POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'error' => 'Method not allowed.']);
     exit;
 }
 
-// Only staff can call this endpoint
 if (!is_logged_in_staff()) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'Authentication required.']);
     exit;
 }
 
-// ── Parse request body ───────────────────────────────────────────────────────
 try {
     $body = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
 } catch (\JsonException $e) {
@@ -56,28 +47,38 @@ if (empty($token_value)) {
     exit;
 }
 
-// Manual entry path: staff typed the token value only (no nonce in the payload).
-// I look up the nonce from the DB so validate_qr_token() can do its full check.
+// Manual entry: no nonce means the staff typed a code rather than scanning.
+// Short codes (up to 8 chars) look up by short_code; full tokens by token_value.
 if (empty($nonce)) {
-    $pdo  = get_db();
-    $stmt = $pdo->prepare(
-        'SELECT nonce FROM qr_tokens
-         WHERE token_value = ? AND is_used = 0 AND expires_at > NOW()
-         LIMIT 1'
-    );
-    $stmt->execute([$token_value]);
-    $row = $stmt->fetch();
+    $pdo = get_db();
 
+    if (strlen($token_value) <= 8) {
+        $stmt = $pdo->prepare(
+            'SELECT token_value, nonce FROM qr_tokens
+             WHERE short_code = ? AND is_used = 0 AND expires_at > NOW()
+             LIMIT 1'
+        );
+        $stmt->execute([strtoupper($token_value)]);
+    } else {
+        $stmt = $pdo->prepare(
+            'SELECT token_value, nonce FROM qr_tokens
+             WHERE token_value = ? AND is_used = 0 AND expires_at > NOW()
+             LIMIT 1'
+        );
+        $stmt->execute([$token_value]);
+    }
+
+    $row = $stmt->fetch();
     if (!$row) {
         http_response_code(422);
         echo json_encode(['success' => false, 'error' => 'Token is invalid, expired, or already used.']);
         exit;
     }
 
-    $nonce = $row['nonce'];
+    $token_value = $row['token_value'];
+    $nonce       = $row['nonce'];
 }
 
-// ── Validate the token ───────────────────────────────────────────────────────
 $cafe_id  = (int)$_SESSION['cafe_id'];
 $staff_id = (int)$_SESSION['staff_id'];
 

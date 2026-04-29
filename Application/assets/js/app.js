@@ -1,18 +1,15 @@
 /**
  * Re-fill — Global JavaScript
  *
- * I put everything that's needed across multiple pages here and expose it
- * on window.Refill so inline page scripts can reference it without globals.
- * app.js is loaded in <head> so window.Refill is always defined before any
- * inline script runs.
+ * Shared utilities exposed on window.Refill so inline page scripts can access
+ * them without polluting the global scope. Loaded in <head> so window.Refill
+ * is always defined before any inline script runs.
  */
 
 'use strict';
 
-// ── QR Countdown Timer ───────────────────────────────────────────────────────
-// I use a module pattern (IIFE) so intervalId and secondsLeft are private —
-// no other script can accidentally clear the interval or reset the counter.
-
+// QrTimer: IIFE keeps intervalId and secondsLeft private so no external script
+// can accidentally clear the interval or corrupt the countdown state.
 const QrTimer = (() => {
   let intervalId  = null;
   let secondsLeft = 0;
@@ -23,8 +20,8 @@ const QrTimer = (() => {
 
     if (!countdownEl) return;
 
-    // I calculate from the server's expiry timestamp rather than counting down
-    // from durationSeconds — this corrects for network latency and page render time.
+    // Calculate from the server expiry timestamp rather than durationSeconds
+    // to correct for network latency and page render time.
     const expiresAt = new Date(expiresAtISO).getTime();
     secondsLeft = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
 
@@ -46,8 +43,7 @@ const QrTimer = (() => {
         clearInterval(intervalId);
         countdownEl.textContent = 'Expired';
         announceToScreenReader('QR code has expired. Please refresh.');
-        // Move focus to the refresh button so keyboard users don't have to tab to it
-        if (refreshBtn) refreshBtn.focus();
+        if (refreshBtn) refreshBtn.focus(); // save keyboard users a tab stop
       }
     }, 1000);
   }
@@ -60,10 +56,9 @@ const QrTimer = (() => {
 })();
 
 
-// ── Screen reader live region ────────────────────────────────────────────────
-// I create the live region dynamically rather than baking it into every page's HTML.
-// Clearing textContent before setting it again forces screen readers to re-announce
-// even if the message is the same as before.
+// Dynamic live region: created once and reused across announcements.
+// Clearing textContent before setting it again forces screen readers to
+// re-announce even when the message text is unchanged.
 function announceToScreenReader(message) {
   let liveRegion = document.getElementById('sr-live');
 
@@ -82,9 +77,8 @@ function announceToScreenReader(message) {
 }
 
 
-// ── Alert auto-dismiss ───────────────────────────────────────────────────────
-// I wrap this in DOMContentLoaded because app.js is in <head> — the DOM
-// isn't ready until the event fires, so I can't query elements immediately.
+// DOMContentLoaded wrapper required because app.js is loaded in <head>
+// and the DOM elements don't exist until parsing is complete.
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('[data-dismiss="5000"]').forEach(el => {
     setTimeout(() => {

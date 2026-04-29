@@ -29,7 +29,7 @@ $page_title = 'Log in';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div style="max-width:420px; margin:0 auto;">
+<div class="page-form">
     <h1>Log in to Re-fill</h1>
     <p>New here? <a href="<?= BASE_URL ?>/customer/register.php">Create a free account</a></p>
 
@@ -37,7 +37,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="alert alert-error" role="alert"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="post" action="" novalidate style="margin-top:1.5rem;">
+    <form method="post" action="" novalidate class="form-body">
 
         <div class="form-group">
             <label for="email">Email address</label>
@@ -51,15 +51,15 @@ require_once __DIR__ . '/../includes/header.php';
                    autocomplete="current-password" required aria-required="true">
         </div>
 
-        <button type="submit" style="width:100%;">Log in</button>
+        <button type="submit" class="btn-block">Log in</button>
 
-        <p style="margin-top:1rem; font-size:.9rem; color:var(--colour-text-muted);">
+        <p class="form-hint">
             Forgot your password? Contact your café directly to reset your account.
         </p>
     </form>
 
-    <hr style="margin:2rem 0; border:none; border-top:1px solid var(--colour-border);">
-    <p style="font-size:.85rem; color:var(--colour-text-muted);">
+    <hr class="section-divider">
+    <p class="footer-note">
         Are you cafe staff? <a href="<?= BASE_URL ?>/staff/login.php">Staff login →</a>
     </p>
 </div>

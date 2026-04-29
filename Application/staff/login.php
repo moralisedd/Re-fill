@@ -29,7 +29,7 @@ $page_title = 'Staff Login';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div style="max-width:420px; margin:0 auto;">
+<div class="page-form">
     <h1>Staff login</h1>
     <p>Customer? <a href="<?= BASE_URL ?>/customer/login.php">Log in here</a></p>
 
@@ -37,7 +37,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="alert alert-error" role="alert"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="post" novalidate style="margin-top:1.5rem;">
+    <form method="post" novalidate class="form-body">
         <div class="form-group">
             <label for="email">Staff email</label>
             <input type="email" id="email" name="email" autocomplete="email" required aria-required="true">
@@ -46,7 +46,7 @@ require_once __DIR__ . '/../includes/header.php';
             <label for="password">Password</label>
             <input type="password" id="password" name="password" autocomplete="current-password" required aria-required="true">
         </div>
-        <button type="submit" style="width:100%;">Log in as staff</button>
+        <button type="submit" class="btn-block">Log in as staff</button>
     </form>
 </div>
 

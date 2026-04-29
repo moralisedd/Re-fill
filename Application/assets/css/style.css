@@ -1,35 +1,78 @@
 /* ============================================================
    Re-fill — Global Stylesheet
+   Dark mode by default — all colour variables are dark-theme values.
    I wrote this to WCAG 2.1 AA standards throughout:
    - Colour contrast ≥4.5:1 for all body text (checked with WebAIM)
    - 3px accent focus rings on all interactive elements
    - Minimum 44×44px tap targets on all buttons and inputs
    - Skip-to-content link for keyboard-only navigation
+   Bootstrap 5 (loaded before this file) handles the base reset and grid.
+   This file handles all custom tokens, components, and dark-theme overrides.
    ============================================================ */
 
-/* ── Custom properties ─────────────────────────────────────── */
+/* ── Custom properties (dark theme) ─────────────────────────
+   I map our brand tokens over Bootstrap's dark-mode palette.
+   Bootstrap sets its own --bs-* variables via [data-bs-theme=dark];
+   we keep a separate --colour-* namespace so our components are
+   never silently broken by a Bootstrap upgrade changing their vars.
+*/
 :root {
-  --colour-primary:     #1a6b3c;   /* accessible green */
+  /* Brand green — dark enough on #1f2937 for WCAG AA at 4.6:1 with white text */
+  --colour-primary:     #1a6b3c;
   --colour-primary-dk:  #134f2d;
-  --colour-accent:      #f0a500;
-  --colour-bg:          #f9fafb;
-  --colour-surface:     #ffffff;
-  --colour-text:        #111827;
-  --colour-text-muted:  #6b7280;
-  --colour-border:      #d1d5db;
-  --colour-error:       #dc2626;
-  --colour-success:     #16a34a;
+  --colour-accent:      #f59e0b;   /* amber — used for focus rings */
+
+  /* Dark-mode surfaces */
+  --colour-bg:          #111827;   /* body — gray-900 */
+  --colour-surface:     #1f2937;   /* cards, header, footer — gray-800 */
+  --colour-bg-card:     #1f2937;   /* alias kept for flip-card CSS */
+  --colour-bg-alt:      #1f2937;   /* short-code display background */
+
+  /* Typography */
+  --colour-text:        #f9fafb;   /* near-white — gray-50 */
+  --colour-text-muted:  #9ca3af;   /* gray-400 */
+
+  /* Borders */
+  --colour-border:      #374151;   /* gray-700 */
+
+  /* Semantic colours — brighter variants for visibility on dark bg */
+  --colour-error:       #f87171;   /* red-400 */
+  --colour-success:     #4ade80;   /* green-400 */
 
   --radius:    0.5rem;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.10);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.40);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.50);
 
   --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono: 'Consolas', 'Courier New', monospace;
 }
 
-/* ── Reset ─────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Reset / base overrides ─────────────────────────────────
+   I set color-scheme: dark directly on <html> so the browser
+   uses a dark chrome (scrollbars, form controls, system UI) even
+   if Bootstrap's CDN is blocked by Brave Shields.
+
+   I also define the Bootstrap dark-mode CSS variables here so that
+   var(--bs-border-color), var(--bs-secondary-color) etc. resolve
+   correctly on pages that use Bootstrap utility classes — those vars
+   are normally set by [data-bs-theme=dark] inside Bootstrap's own
+   stylesheet, but if the CDN is blocked they're undefined and our
+   custom CSS that references them silently collapses to nothing.
+*/
+html {
+  color-scheme: dark;
+  /* Bootstrap dark-mode palette — mirrors what Bootstrap sets via [data-bs-theme=dark] */
+  --bs-body-bg:          #111827;
+  --bs-body-color:       #f9fafb;
+  --bs-border-color:     #374151;
+  --bs-secondary-color:  #9ca3af;
+  --bs-border-radius-lg: 0.5rem;
+  --bs-border-radius:    0.375rem;
+  --bs-link-color:       #4ade80;
+  --bs-link-hover-color: #86efac;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; font-size: 100%; }
 
@@ -43,9 +86,9 @@ body {
   flex-direction: column;
 }
 
-/* ── Visually hidden (screen-reader only) ──────────────────── */
-/* I use this on the dynamic aria-live region injected by app.js —
-   it needs to be in the DOM for screen readers but invisible visually. */
+/* ── Visually hidden (screen-reader only) ───────────────────
+   I use this on the dynamic aria-live region injected by app.js.
+*/
 .sr-only {
   position:   absolute;
   width:      1px;
@@ -58,47 +101,66 @@ body {
   border:     0;
 }
 
-/* ── Skip link (accessibility) ─────────────────────────────── */
+/* ── Skip link (accessibility) ──────────────────────────────
+   Bootstrap's visually-hidden-focusable handles the clip-based hiding.
+   I use position:fixed so the link always pins to the top-left of the
+   viewport on focus — position:absolute would scroll with the page and
+   disappear behind the sticky header if the user has scrolled down.
+   z-index:9999 ensures it sits above the sticky header (z-index:100).
+*/
 .skip-link {
-  position:  absolute;
-  top:       -100%;
-  left:      1rem;
-  padding:   0.5rem 1rem;
-  background: var(--colour-primary);
-  color:     #fff;
-  border-radius: var(--radius);
-  z-index:   9999;
-  font-weight: 700;
-  transition: top .2s;
+  position:        fixed;
+  top:             1rem;
+  left:            1rem;
+  padding:         0.75rem 1.25rem;
+  background:      var(--colour-primary);
+  color:           #fff !important;
+  border-radius:   var(--radius);
+  z-index:         9999;
+  font-weight:     700;
+  text-decoration: none;
 }
-.skip-link:focus { top: 1rem; }
 
-/* ── Layout helpers ────────────────────────────────────────── */
+/* ── Layout helpers ─────────────────────────────────────────*/
 .container {
-  width:   100%;
+  width:     100%;
   max-width: 1100px;
-  margin:  0 auto;
-  padding: 0 1.25rem;
+  margin:    0 auto;
+  padding:   0 1.25rem;
 }
 
-main.container { flex: 1; padding-top: 2rem; padding-bottom: 3rem; }
+main.container {
+  flex:              1;
+  padding-top:       2rem;
+  padding-bottom:    3rem;
+  /* scroll-margin-top offsets the sticky header so #main-content isn't
+     hidden beneath it when the skip link fires */
+  scroll-margin-top: 5rem;
+}
 
-/* ── Typography ────────────────────────────────────────────── */
+/* tabindex="-1" lets the skip link send focus here programmatically.
+   We suppress the outline because this focus is invisible infrastructure —
+   the user never tabs to <main> directly. */
+#main-content:focus { outline: none; }
+
+/* ── Typography ─────────────────────────────────────────────*/
 h1 { font-size: 2rem;   font-weight: 700; line-height: 1.2; margin-bottom: 0.5rem; }
 h2 { font-size: 1.5rem; font-weight: 600; line-height: 1.3; margin-bottom: 0.5rem; }
 h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
 p  { margin-bottom: 1rem; }
-a  { color: var(--colour-primary); text-decoration: underline; }
-a:hover { color: var(--colour-primary-dk); }
 
-/* ── Focus ring (WCAG 2.1 AA) ──────────────────────────────── */
+/* Links — brighter green so they're visible on the dark surface */
+a  { color: #4ade80; text-decoration: underline; }
+a:hover { color: #86efac; }
+
+/* ── Focus ring (WCAG 2.1 AA) ───────────────────────────────*/
 :focus-visible {
   outline: 3px solid var(--colour-accent);
   outline-offset: 2px;
   border-radius: 2px;
 }
 
-/* ── Header ────────────────────────────────────────────────── */
+/* ── Header ─────────────────────────────────────────────────*/
 .site-header {
   background: var(--colour-surface);
   border-bottom: 1px solid var(--colour-border);
@@ -122,9 +184,11 @@ a:hover { color: var(--colour-primary-dk); }
   gap:         0.5rem;
   font-size:   1.4rem;
   font-weight: 800;
-  color:       var(--colour-primary);
+  /* Brighter green so the logo is readable on the dark header surface */
+  color:       #4ade80;
   text-decoration: none;
 }
+.logo:hover { color: #86efac; }
 
 .main-nav {
   display:     flex;
@@ -135,14 +199,24 @@ a:hover { color: var(--colour-primary-dk); }
 
 .main-nav a {
   text-decoration: none;
-  color: var(--colour-text);
+  color:       var(--colour-text-muted);
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size:   0.95rem;
+  padding:     .2rem .5rem;
+  border-radius: var(--radius);
+  transition:  color .15s, background .15s;
 }
 
-.main-nav a:hover { color: var(--colour-primary); }
+.main-nav a:hover { color: var(--colour-text); }
 
-/* ── Buttons ────────────────────────────────────────────────── */
+/* Active nav link — green pill highlight so the current page is obvious */
+.main-nav a.nav-active {
+  color:       #4ade80;
+  font-weight: 700;
+  background:  rgba(74, 222, 128, .12);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────*/
 .btn-primary,
 .btn-secondary,
 .btn-danger,
@@ -158,47 +232,48 @@ button[type="submit"] {
   cursor:        pointer;
   border:        2px solid transparent;
   text-decoration: none;
-  min-height:    44px;    /* WCAG tap target */
+  min-height:    44px;
   min-width:     44px;
   transition:    background .2s, border-color .2s, color .2s;
 }
 
 .btn-primary,
 button[type="submit"] {
-  background: var(--colour-primary);
-  color:      #fff;
+  background:   var(--colour-primary);
+  color:        #fff;
   border-color: var(--colour-primary);
 }
 .btn-primary:hover,
 button[type="submit"]:hover {
-  background: var(--colour-primary-dk);
+  background:   var(--colour-primary-dk);
   border-color: var(--colour-primary-dk);
-  color: #fff;
+  color:        #fff;
 }
 
 .btn-secondary {
   background:   transparent;
-  color:        var(--colour-primary);
-  border-color: var(--colour-primary);
+  color:        #4ade80;
+  border-color: #4ade80;
 }
 .btn-secondary:hover {
-  background: var(--colour-primary);
-  color:      #fff;
+  background: rgba(74, 222, 128, .15);
+  color:      #4ade80;
 }
 
 .btn-danger {
-  background: var(--colour-error);
-  color:      #fff;
+  background:   var(--colour-error);
+  color:        #fff;
   border-color: var(--colour-error);
 }
 
-/* ── Cards ──────────────────────────────────────────────────── */
+/* ── Cards ───────────────────────────────────────────────────*/
 .card {
   background:    var(--colour-surface);
   border:        1px solid var(--colour-border);
   border-radius: var(--radius);
   padding:       1.5rem;
   box-shadow:    var(--shadow-sm);
+  color:         var(--colour-text);
 }
 
 .card-grid {
@@ -208,7 +283,7 @@ button[type="submit"]:hover {
   margin-bottom:         2rem;
 }
 
-/* ── Stat cards ─────────────────────────────────────────────── */
+/* ── Stat cards ──────────────────────────────────────────────*/
 .stat-card {
   text-align: center;
   padding:    1.75rem 1.25rem;
@@ -217,7 +292,8 @@ button[type="submit"]:hover {
 .stat-card .stat-value {
   font-size:   2.5rem;
   font-weight: 800;
-  color:       var(--colour-primary);
+  /* Bright green so the number pops on the dark card surface */
+  color:       #4ade80;
   line-height: 1;
 }
 
@@ -227,7 +303,7 @@ button[type="submit"]:hover {
   margin-top: 0.25rem;
 }
 
-/* ── Forms ──────────────────────────────────────────────────── */
+/* ── Forms ───────────────────────────────────────────────────*/
 .form-group { margin-bottom: 1.25rem; }
 
 label {
@@ -235,6 +311,7 @@ label {
   font-weight:   600;
   font-size:     0.9rem;
   margin-bottom: 0.375rem;
+  color:         var(--colour-text);
 }
 
 input[type="text"],
@@ -258,9 +335,9 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--colour-primary);
+  border-color: #4ade80;
   outline:      none;
-  box-shadow:   0 0 0 3px rgba(26,107,60,.15);
+  box-shadow:   0 0 0 3px rgba(74, 222, 128, .20);
 }
 
 .form-error {
@@ -269,7 +346,9 @@ textarea:focus {
   margin-top: 0.25rem;
 }
 
-/* ── Alerts ─────────────────────────────────────────────────── */
+/* ── Alerts ──────────────────────────────────────────────────
+   Dark-mode alert colours — light text on dark tinted backgrounds.
+*/
 .alert {
   padding:       0.875rem 1.25rem;
   border-radius: var(--radius);
@@ -278,12 +357,12 @@ textarea:focus {
   border-left:   4px solid;
 }
 
-.alert-success { background: #f0fdf4; color: #15803d; border-color: #16a34a; }
-.alert-error   { background: #fef2f2; color: #b91c1c; border-color: #dc2626; }
-.alert-info    { background: #eff6ff; color: #1d4ed8; border-color: #3b82f6; }
-.alert-warning { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
+.alert-success { background: #052e16; color: #86efac; border-color: #22c55e; }
+.alert-error   { background: #450a0a; color: #fca5a5; border-color: #ef4444; }
+.alert-info    { background: #082f49; color: #93c5fd; border-color: #3b82f6; }
+.alert-warning { background: #422006; color: #fde68a; border-color: #f59e0b; }
 
-/* ── QR display ─────────────────────────────────────────────── */
+/* ── QR display ──────────────────────────────────────────────*/
 .qr-wrapper {
   display:         flex;
   flex-direction:  column;
@@ -295,13 +374,13 @@ textarea:focus {
 .qr-countdown {
   font-size:   2rem;
   font-weight: 800;
-  color:       var(--colour-primary);
+  color:       #4ade80;
   font-family: var(--font-mono);
 }
 
 .qr-countdown.expiring { color: var(--colour-error); }
 
-/* ── Tables ─────────────────────────────────────────────────── */
+/* ── Tables ──────────────────────────────────────────────────*/
 .table-wrapper { overflow-x: auto; }
 
 table {
@@ -311,23 +390,27 @@ table {
 }
 
 th, td {
-  text-align:  left;
-  padding:     0.75rem 1rem;
+  text-align:    left;
+  padding:       0.75rem 1rem;
   border-bottom: 1px solid var(--colour-border);
+  color:         var(--colour-text);
 }
 
 th {
-  background:  var(--colour-bg);
-  font-weight: 600;
-  font-size:   0.8rem;
+  background:     var(--colour-bg);
+  font-weight:    600;
+  font-size:      0.8rem;
   text-transform: uppercase;
   letter-spacing: .04em;
-  color:       var(--colour-text-muted);
+  color:          var(--colour-text-muted);
 }
 
-tr:hover td { background: #f9fafb; }
+/* Dark row hover — slightly lighter than the surface colour */
+tr:hover td { background: #283548; }
 
-/* ── Badge ──────────────────────────────────────────────────── */
+/* ── Badges ──────────────────────────────────────────────────
+   Dark-mode badges — muted tinted backgrounds with legible text.
+*/
 .badge {
   display:       inline-block;
   padding:       0.2rem 0.6rem;
@@ -337,12 +420,12 @@ tr:hover td { background: #f9fafb; }
   text-transform: uppercase;
 }
 
-.badge-green  { background: #dcfce7; color: #15803d; }
-.badge-amber  { background: #fef3c7; color: #92400e; }
-.badge-red    { background: #fee2e2; color: #b91c1c; }
-.badge-blue   { background: #dbeafe; color: #1d4ed8; }
+.badge-green  { background: #052e16; color: #86efac; }
+.badge-amber  { background: #451a03; color: #fde68a; }
+.badge-red    { background: #450a0a; color: #fca5a5; }
+.badge-blue   { background: #082f49; color: #93c5fd; }
 
-/* ── Footer ─────────────────────────────────────────────────── */
+/* ── Footer ──────────────────────────────────────────────────*/
 .site-footer {
   background:    var(--colour-surface);
   border-top:    1px solid var(--colour-border);
@@ -360,15 +443,258 @@ tr:hover td { background: #f9fafb; }
 }
 
 .site-footer nav a {
-  color: var(--colour-text-muted);
-  margin-left: 1rem;
+  color:           var(--colour-text-muted);
+  margin-left:     1rem;
   text-decoration: none;
 }
+.site-footer nav a:hover { color: var(--colour-text); }
 
-/* ── Responsive ─────────────────────────────────────────────── */
+/* ── Responsive ──────────────────────────────────────────────*/
 @media (max-width: 640px) {
   .header-inner { flex-direction: column; gap: 0.75rem; }
   .main-nav     { justify-content: center; }
   .card-grid    { grid-template-columns: 1fr; }
   h1            { font-size: 1.6rem; }
 }
+
+/* ── Page wrappers ───────────────────────────────────────────
+   Constrain content width on text-heavy and form pages.
+   These replace the inline max-width / margin:0 auto pattern
+   that was scattered across nearly every page.
+*/
+.page-prose  { max-width: 700px; margin: 0 auto; }
+.page-form   { max-width: 420px; margin: 0 auto; }
+.page-narrow { max-width: 480px; margin: 0 auto; }
+.page-qr     { max-width: 480px; margin: 0 auto; text-align: center; }
+.page-scan   { max-width: 540px; margin: 0 auto; }
+
+/* ── Hero section (index.php) ────────────────────────────────
+   Full-width centred landing block containing a large icon,
+   headline, tagline paragraph, and a CTA button row.
+*/
+.hero         { text-align: center; padding: 4rem 1rem; }
+.hero-icon    { font-size: 4rem; }
+.hero h1      { margin-top: 1rem; }
+.hero-tagline { font-size: 1.15rem; color: var(--colour-text-muted); max-width: 520px; margin: 1rem auto 2rem; }
+.btn-row      { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+/* ── Feature / how-it-works cards ───────────────────────────
+   Cards that hold an icon, heading, and a short description,
+   laid out in a centred column. Used on index.php and about.php.
+   .feature-icon / .feature-icon-sm control the emoji size for
+   the two different page contexts (2.5rem vs 2rem).
+*/
+.card--centered             { text-align: center; }
+.card--centered .feature-icon    { font-size: 2.5rem; }
+.card--centered .feature-icon-sm { font-size: 2rem; }
+.card--centered h2,
+.card--centered h3          { margin-top: .75rem; }
+.card--centered p           { font-size: .9rem; }
+
+/* ── Card-grid spacing variants ──────────────────────────────
+   The base .card-grid already applies margin-bottom:2rem.
+   These modifiers handle pages where top-spacing differs.
+*/
+.card-grid--sm { margin-top: 1rem; }
+.card-grid--md { margin-top: 1.5rem; }
+.card-grid--lg { margin-top: 3rem; }
+
+/* ── Table-in-card layout ────────────────────────────────────
+   Tables are wrapped in a .card for the border/shadow, but the
+   card's default 1.5rem padding pushes the table edges in from
+   the card border. The table should fill flush so its own
+   cell padding takes effect instead.
+*/
+.table-wrapper.card { padding: 0; }
+
+/* ── Section headings ────────────────────────────────────────
+   h2 elements that open a new content section need breathing
+   room above them. Applied on dashboard, admin, and staff pages.
+*/
+.section-heading { margin-top: 2rem; }
+
+/* ── Page header row ─────────────────────────────────────────
+   Flex row with the page title and subtitle on the left and a
+   primary action button on the right. Used on staff/dashboard.php.
+   The p rule removes default bottom margin so the subtitle sits
+   flush with the heading baseline.
+*/
+.page-header   { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.page-header p { color: var(--colour-text-muted); margin-bottom: 0; }
+
+/* ── Prose and footer helpers ────────────────────────────────
+   Small metadata lines (last-updated dates, staff login links)
+   and back-navigation paragraphs on informational pages.
+*/
+.page-meta   { color: var(--colour-text-muted); font-size: .9rem; }
+.page-back   { margin-top: 1.5rem; }
+.footer-note { font-size: .85rem; color: var(--colour-text-muted); }
+
+/* ── Prose list ──────────────────────────────────────────────
+   Indented unordered list with generous line-height for
+   readability. Used in privacy.php and accessibility.php.
+*/
+.prose-list { margin-left: 1.5rem; margin-bottom: 1rem; line-height: 1.8; }
+
+/* ── Form helpers ────────────────────────────────────────────
+   Supplements the existing .form-group / label rules.
+   .form-body adds top-margin to the <form> element itself.
+   .btn-block makes submit buttons span full container width.
+   .label-optional styles the "(optional)" text inside a label.
+   .field-hint styles helper text beneath a field (e.g. password rules).
+   .form-hint is a muted paragraph below the submit button.
+   .section-divider is the <hr> separating form sections.
+*/
+.form-body      { margin-top: 1.5rem; }
+.btn-block      { width: 100%; }
+.label-optional { font-weight: 400; color: var(--colour-text-muted); }
+.field-hint     { display: block; font-size: .8rem; color: var(--colour-text-muted); margin-top: .25rem; }
+.form-hint      { margin-top: 1rem; font-size: .9rem; color: var(--colour-text-muted); }
+.section-divider { margin: 2rem 0; border: none; border-top: 1px solid var(--colour-border); }
+
+/* ── Customer dashboard ──────────────────────────────────────
+   Balance card: constrained width so the single stat does not
+   stretch across the full container on wide viewports.
+   Action cards (QR / rewards): extra internal padding and gap
+   to give the CTA room to breathe.
+*/
+.stat-card--balance { min-width: 220px; max-width: 300px; width: 100%; }
+.action-card        { padding: 1.75rem; gap: .75rem; }
+.action-card-text   { font-size: .95rem; margin-bottom: 0; }
+
+/* ── Table cell variants ─────────────────────────────────────
+   .td-meta styles secondary information (location, short text)
+   in muted, smaller text — same visual weight as a caption.
+   .points-positive / .points-negative colour the delta column
+   by sign so earn/redeem is immediately scannable.
+*/
+.td-meta         { color: var(--colour-text-muted); font-size: .875rem; }
+.points-positive { font-weight: 600; color: var(--colour-success); }
+.points-negative { font-weight: 600; color: var(--colour-error); }
+
+/* ── Staff dashboard Scan button ─────────────────────────────
+   Larger than the standard .btn-primary to make it the clear
+   primary action on the staff dashboard header row.
+*/
+.btn-primary-lg { font-size: 1.1rem; padding: .75rem 1.5rem; }
+
+/* ── QR page (customer/qr.php) ───────────────────────────────
+   The main QR card, countdown refresh label, and the manual
+   short-code entry block that sits beneath it.
+   .qr-error targets the JS-injected error paragraph when
+   the QR library fails to load or generate.
+*/
+.qr-card         { margin-top: 1.5rem; }
+.qr-refresh-text { color: var(--colour-text-muted); font-size: .875rem; }
+.qr-error        { color: var(--colour-error); padding: 1rem; }
+
+.short-code-section { margin-top: 1rem; text-align: center; }
+.short-code-label   { font-size: .8rem; color: var(--colour-text-muted); margin-bottom: .4rem; }
+.short-code-box     { display: inline-flex; align-items: center; gap: .75rem;
+                      background: var(--colour-bg-alt, #1f2937);
+                      border: 1px solid var(--colour-border);
+                      border-radius: var(--radius);
+                      padding: .6rem 1rem; }
+.short-code-value   { font-family: var(--font-mono, monospace); font-size: 1.5rem;
+                      font-weight: 700; letter-spacing: .2em; color: var(--colour-text); }
+.btn-copy           { padding: .35rem .7rem; font-size: .8rem; }
+
+/* ── Scan page (staff/scan.php) ──────────────────────────────
+   Result banner, camera viewfinder, divider between camera and
+   manual entry, and the manual code input within its card.
+*/
+.scan-result     { min-height: 2rem; margin: 1rem 0; }
+.card--compact   { padding: 1rem; text-align: center; }
+.camera-view     { width: 100%; max-width: 400px; margin: 0 auto; }
+.camera-status   { margin-top: .5rem; font-size: .85rem; color: var(--colour-text-muted); }
+.scan-divider    { margin: 1.25rem 0; border: none; border-top: 1px solid var(--colour-border); }
+.card-subheading { font-size: 1rem; margin-bottom: .75rem; }
+.token-input     { flex: 1; text-transform: uppercase; letter-spacing: .1em; }
+.scan-hint       { margin: .5rem 0 0; font-size: .8rem; color: var(--colour-text-muted); }
+
+/* ── Admin panel ─────────────────────────────────────────────
+   .reward-desc-sm styles the reward description line that sits
+   beneath the reward name in the admin table.
+*/
+.reward-desc-sm { font-size: .85rem; color: var(--colour-text-muted); }
+
+/* ── Rewards page (customer/rewards.php) ─────────────────────
+   Page heading and balance text, larger badge variant, and the
+   label styles for redeemable vs locked reward back faces.
+*/
+.rewards-heading        { margin-bottom: .25rem; }
+.rewards-balance        { color: var(--colour-text-muted); margin-bottom: 1.5rem; }
+.rewards-balance strong { color: var(--colour-text); }
+.badge-lg               { font-size: .85rem; padding: .3rem .75rem; }
+.redeem-ready           { color: #4ade80; font-size: .8rem; font-weight: 600; }
+.redeem-locked          { color: var(--colour-error); font-size: .8rem; }
+.redeem-locked-text     { color: var(--colour-text-muted); font-size: .9rem; padding: 0 .5rem; margin: 0; }
+.btn-earn               { margin-top: .75rem; font-size: .85rem; padding: .5rem 1rem; }
+
+/* ── Flip card (rewards catalogue) ──────────────────────────
+   CSS 3D flip for the rewards catalogue. I keep this separate
+   from the base .card rule because preserve-3d on a static card
+   breaks stacking context for everything inside it.
+   The outer .flip-wrapper provides perspective context only;
+   .flip-inner is the element that actually rotates.
+*/
+.flip-wrapper {
+  perspective: 900px;
+  height:      280px;
+  cursor:      pointer;
+}
+
+.flip-inner {
+  position:        relative;
+  width:           100%;
+  height:          100%;
+  transform-style: preserve-3d;
+  transition:      transform .45s cubic-bezier(.4, 0, .2, 1);
+}
+
+.flip-wrapper.flipped .flip-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-face {
+  position:                    absolute;
+  inset:                       0;
+  backface-visibility:         hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius:               var(--radius);
+  border:                      1px solid var(--colour-border);
+  background:                  var(--colour-surface);
+  padding:                     .875rem;
+  display:                     flex;
+  flex-direction:              column;
+  overflow:                    hidden;
+}
+
+/* Redeemable front face gets a subtle green tint */
+.flip-face.front.can-redeem {
+  border-color: rgba(74, 222, 128, .35);
+  background:   linear-gradient(160deg, #1f2937 0%, #0d2a1a 100%);
+}
+
+.flip-face.back {
+  transform:       rotateY(180deg);
+  align-items:     center;
+  justify-content: center;
+  gap:             .3rem;
+  text-align:      center;
+  padding:         .875rem .75rem;
+}
+
+/* Back face flip-hint needs extra top margin to clear the QR box */
+.flip-face.back .reward-hint { margin-top: .5rem; }
+
+/* Front face layout */
+.reward-name   { font-size: 1.05rem; font-weight: 600; margin: 0 0 .4rem; color: var(--colour-text); }
+.reward-desc   { font-size: .875rem; color: var(--colour-text-muted); flex: 1; margin: 0; }
+.reward-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: .75rem; }
+.reward-hint   { font-size: .75rem; color: var(--colour-text-muted); margin-top: auto; text-align: right; }
+
+/* Back face layout */
+.qr-box       { background: #fff; border-radius: 6px; padding: 6px; line-height: 0; flex-shrink: 0; }
+.redeem-label { font-size: .75rem; color: var(--colour-text-muted); margin: 0; line-height: 1.3; }
+.redeem-name  { font-size: .9rem; font-weight: 600; margin: 0; color: var(--colour-text); }
