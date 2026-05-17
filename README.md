@@ -4,7 +4,8 @@ A secure, web-based loyalty programme that rewards café customers for bringing 
 
 Built with PHP 8.2, MySQL, and vanilla JavaScript. No frameworks — just clean, readable code.
 
-<img width="1909" height="993" alt="image" src="https://github.com/user-attachments/assets/8e898f6a-4776-48b7-ac8e-cb27321518ff" />
+<img width="1909" height="993" alt="image" src="https://github.com/user-attachments/assets/e3e9c315-adb0-468b-9789-caf5571f7403" />
+
 
 <img width="1903" height="979" alt="image" src="https://github.com/user-attachments/assets/a2a771e8-e2e4-412c-8c64-8518102781a9" />
 
